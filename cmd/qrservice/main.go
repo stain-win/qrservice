@@ -1,0 +1,38 @@
+package main
+
+import (
+	"flag"
+	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
+	"github.com/stain-win/qrservice/healthcheckhandler"
+	"github.com/stain-win/qrservice/qrhandlers"
+	"net/http"
+	"time"
+)
+
+const (
+	portDelimiter = ":"
+)
+
+var (
+	port = flag.String("port", "3200", "http service port")
+)
+
+func main() {
+	flag.Parse()
+	r := chi.NewRouter()
+	r.Use(middleware.Logger)
+	r.Use(middleware.Timeout(5 * time.Second))
+
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("."))
+	})
+
+	qr := qrhandlers.NewQrHandler()
+	hc := healthcheckhandler.NewHealthCheckHandler()
+
+	r.Mount("/qr", qr.Routes())
+	r.Mount("/healthcheck", hc.Routes())
+
+	http.ListenAndServe(portDelimiter+*port, r)
+}

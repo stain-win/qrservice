@@ -1,0 +1,5 @@
+GET http://localhost:3200/qr/img?ctn=http://leotto.cok
+###
+GET http://localhost:3200/qr?ctn=http://leotto.cok
+###
+GET http://localhost:3200/qr/json?ctn=http://leotto.cok
