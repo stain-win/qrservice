@@ -16,9 +16,11 @@ const (
 
 var (
 	port = flag.String("port", "3200", "http service port")
+	startTime time.Time
 )
 
 func main() {
+	startTime = time.Now()
 	flag.Parse()
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
@@ -29,7 +31,7 @@ func main() {
 	})
 
 	qr := qrhandlers.NewQrHandler()
-	hc := healthcheckhandler.NewHealthCheckHandler()
+	hc := healthcheckhandler.NewHealthCheckHandler(startTime)
 
 	r.Mount("/qr", qr.Routes())
 	r.Mount("/healthcheck", hc.Routes())

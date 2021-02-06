@@ -109,7 +109,7 @@ func boolToInt (q *qrcode.QRCode) [][]int {
 	intArray := make([][]int, len(bits))
 
 	for i := range intArray {
-		intArray[i] = make([]int, 0, len(bits)/2)
+		intArray[i] = make([]int, 0, len(bits[i]))
 	}
 
 	for y := range bits {
