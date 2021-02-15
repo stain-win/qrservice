@@ -1,5 +1,18 @@
+POST http://localhost:3200/qr/img?ctn=https://google.com2
+Content-Type: application/json
+
+{
+  "qr_content": "http://testt.com",
+  "bg_color": "#FFFFFF",
+  "color": "#FF22FF",
+  "size": 256
+}
+
+###
 GET http://localhost:3200/qr/img?ctn=http://leotto.cok
 ###
 GET http://localhost:3200/qr?ctn=http://leotto.cok
 ###
 GET http://localhost:3200/qr/json?ctn=http://leotto.cok
+###
+

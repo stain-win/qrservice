@@ -3,31 +3,57 @@ package qrhandlers
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/render"
 	"github.com/skip2/go-qrcode"
 	"github.com/stain-win/qrservice/errorhandler"
+	"github.com/stain-win/qrservice/utils"
 	"image/color"
 	"net/http"
 )
+
 var qrContentKey = "content"
-type qrHandler struct {}
+
+type qrHandler struct{}
 
 type QrJsonResponse struct {
-	Content string `json:"content"`
-	Matrix [][]int `json:"matrix"`
+	Content string  `json:"content"`
+	Matrix  [][]int `json:"matrix"`
 }
 
-func (qrj QrJsonResponse) Render (w http.ResponseWriter, r *http.Request) error {
+type QrCode struct {
+	Content string `json:"qr_content"`
+	BgColor string `json:"bg_color,omitempty"`
+	Color   string `json:"color,omitempty"`
+	Level   int    `json:"err_level,omitempty"`
+	Size    int    `json:"size,omitempty"`
+	Output  string `json:"output,omitempty"`
+	Border  bool   `json:"border,omitempty"`
+}
+
+type QrCodeRequest struct {
+	*QrCode
+}
+
+func (qrc *QrCodeRequest) Bind(r *http.Request) error {
+	if qrc.QrCode == nil {
+		return errors.New("missing required params")
+	}
+
 	return nil
 }
 
-func (qr qrHandler) Routes () chi.Router {
+func (qrj QrJsonResponse) Render(w http.ResponseWriter, r *http.Request) error {
+	return nil
+}
+
+func (qr qrHandler) Routes() chi.Router {
 	r := chi.NewRouter()
 	r.Use(qr.QRContext)
 	r.Get("/", qr.ByteQr)
-	r.Get("/img", qr.ImgQr)
+	r.Post("/img", qr.ImgQr)
 	r.Get("/json", qr.JsonQr)
 	return r
 }
@@ -49,7 +75,6 @@ func (qr qrHandler) ByteQr(w http.ResponseWriter, r *http.Request) {
 	content := r.Context().Value(qrContentKey).(string)
 	c, _ := qrcode.New(content, qrcode.Medium)
 	c.BackgroundColor = color.RGBA{0x00, 0x00, 0x33, 0xff}
-	fmt.Println(len(c.Bitmap()))
 	render.Status(r, http.StatusCreated)
 	//w.Write([]byte(c.ToSmallString(true)))
 	w.Write([]byte(boolToByte(c)))
@@ -61,26 +86,33 @@ func (qr qrHandler) JsonQr(w http.ResponseWriter, r *http.Request) {
 	c, _ := qrcode.New(content, qrcode.Medium)
 
 	render.Status(r, http.StatusOK)
-	render.Render(w, r, NewQrJsonResponse(c))
+	render.JSON(w, r, NewQrJsonResponse(c))
 }
 
-func (qr qrHandler) ImgQr(w http.ResponseWriter, r *http.Request){
-	content := r.Context().Value(qrContentKey).(string)
+func (qr qrHandler) ImgQr(w http.ResponseWriter, r *http.Request) {
+	var c *qrcode.QRCode
 	var png []byte
-	c, _ := qrcode.New(content, qrcode.Medium)
-	c.BackgroundColor = color.RGBA{0x00, 0x00, 0xff, 0xff}
-	c.ForegroundColor = color.RGBA{0x44, 0xFF, 0x00, 0xff}
-	png, _ = c.PNG(512)
-	//png, _ = qrcode.Encode(content, qrcode.Medium, 256)
-	//err = qrcode.WriteColorFile(content, qrcode.Medium, 256, color.Gray, "0000FF", "qr.png")
-	w.Write(png)
+	content := &QrCodeRequest{}
+
+	if err := render.Bind(r, content); err != nil {
+		render.Render(w, r, ErrInvalidRequest(err))
+		return
+	}
+
+	c, _ = qrcode.New(content.Content, qrcode.Medium)
+	c.BackgroundColor, _ = utils.ParseHexColor(content.BgColor)
+	c.ForegroundColor, _ = utils.ParseHexColor(content.Color)
+
+	png, _ = c.PNG(content.Size)
+
+	render.Data(w, r, png)
 }
 
-func NewQrHandler () *qrHandler {
+func NewQrHandler() *qrHandler {
 	return &qrHandler{}
 }
 
-func NewQrJsonResponse (qrCode *qrcode.QRCode) *QrJsonResponse {
+func NewQrJsonResponse(qrCode *qrcode.QRCode) *QrJsonResponse {
 	resp := &QrJsonResponse{}
 	resp.Content = qrCode.Content
 	resp.Matrix = boolToInt(qrCode)
@@ -88,7 +120,7 @@ func NewQrJsonResponse (qrCode *qrcode.QRCode) *QrJsonResponse {
 	return resp
 }
 
-func boolToByte (q *qrcode.QRCode) string {
+func boolToByte(q *qrcode.QRCode) string {
 	bits := q.Bitmap()
 	var buf bytes.Buffer
 	for y := range bits {
@@ -104,7 +136,7 @@ func boolToByte (q *qrcode.QRCode) string {
 	return buf.String()
 }
 
-func boolToInt (q *qrcode.QRCode) [][]int {
+func boolToInt(q *qrcode.QRCode) [][]int {
 	bits := q.Bitmap()
 	intArray := make([][]int, len(bits))
 
@@ -122,4 +154,37 @@ func boolToInt (q *qrcode.QRCode) [][]int {
 		}
 	}
 	return intArray
+}
+
+// TODO move this to separate module
+type ErrResponse struct {
+	Err            error `json:"-"` // low-level runtime error
+	HTTPStatusCode int   `json:"-"` // http response status code
+
+	StatusText string `json:"status"`          // user-level status message
+	AppCode    int64  `json:"code,omitempty"`  // application-specific error code
+	ErrorText  string `json:"error,omitempty"` // application-level error message, for debugging
+}
+
+func (e *ErrResponse) Render(w http.ResponseWriter, r *http.Request) error {
+	render.Status(r, e.HTTPStatusCode)
+	return nil
+}
+
+func ErrInvalidRequest(err error) render.Renderer {
+	return &ErrResponse{
+		Err:            err,
+		HTTPStatusCode: 400,
+		StatusText:     "Invalid request.",
+		ErrorText:      err.Error(),
+	}
+}
+
+func ErrRender(err error) render.Renderer {
+	return &ErrResponse{
+		Err:            err,
+		HTTPStatusCode: 422,
+		StatusText:     "Error rendering response.",
+		ErrorText:      err.Error(),
+	}
 }

@@ -16,7 +16,7 @@ type HealthCheckResponse struct {
 }
 
 type HealthCheckStatusResponse struct {
-	Status string `json:"status"`
+	Status  string  `json:"status"`
 	Elapsed float64 `json:"elapsed"`
 }
 
@@ -28,7 +28,7 @@ func (hcr *HealthCheckStatusResponse) Render(w http.ResponseWriter, r *http.Requ
 	return nil
 }
 
-func (hc HealthCheckHandler) Routes () chi.Router {
+func (hc HealthCheckHandler) Routes() chi.Router {
 	r := chi.NewRouter()
 	r.Use(render.SetContentType(render.ContentTypeJSON))
 	r.Get("/", hc.HealthCheck)
@@ -36,26 +36,26 @@ func (hc HealthCheckHandler) Routes () chi.Router {
 	return r
 }
 
-func (hc HealthCheckHandler) HealthCheck (w http.ResponseWriter, r *http.Request) {
+func (hc HealthCheckHandler) HealthCheck(w http.ResponseWriter, r *http.Request) {
 	render.Render(w, r, NewHealthCheckResponse())
 }
 
-func (hc HealthCheckHandler) Status (w http.ResponseWriter, r *http.Request) {
+func (hc HealthCheckHandler) Status(w http.ResponseWriter, r *http.Request) {
 	render.Render(w, r, NewHealthCheckStatusResponse(hc.TimeStart))
 }
 
-func NewHealthCheckHandler (startTime time.Time) *HealthCheckHandler {
+func NewHealthCheckHandler(startTime time.Time) *HealthCheckHandler {
 
 	return &HealthCheckHandler{TimeStart: startTime}
 }
 
-func NewHealthCheckResponse () *HealthCheckResponse {
+func NewHealthCheckResponse() *HealthCheckResponse {
 	resp := &HealthCheckResponse{}
 	resp.Status = "OK"
 	return resp
 }
 
-func NewHealthCheckStatusResponse (timeStart time.Time) *HealthCheckStatusResponse {
+func NewHealthCheckStatusResponse(timeStart time.Time) *HealthCheckStatusResponse {
 	resp := &HealthCheckStatusResponse{}
 	resp.Status = "OK"
 	resp.Elapsed = time.Since(timeStart).Seconds()
