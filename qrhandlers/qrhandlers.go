@@ -61,7 +61,7 @@ func (qr qrHandler) Routes() chi.Router {
 func (qr qrHandler) QRContext(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctn := r.URL.Query().Get("ctn")
-		if ctn == "" {
+		if ctn == "" && r.Method == "GET" {
 			render.Render(w, r, errorhandler.ErrorRenderer(fmt.Errorf("QR code content is required")))
 			return
 		}
