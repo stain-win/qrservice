@@ -104,8 +104,9 @@ func (qr qrHandler) ImgQr(w http.ResponseWriter, r *http.Request) {
 	c.ForegroundColor, _ = utils.ParseHexColor(content.Color)
 
 	png, _ = c.PNG(content.Size)
-
-	render.Data(w, r, png)
+	render.Status(r, http.StatusOK)
+	w.Header().Set("Content-Type", "image/png")
+	w.Write(png)
 }
 
 func NewQrHandler() *qrHandler {
