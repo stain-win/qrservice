@@ -5,7 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/skip2/go-qrcode"
 	"github.com/stain-win/qrservice/errorhandler"
@@ -76,7 +76,6 @@ func (qr qrHandler) ByteQr(w http.ResponseWriter, r *http.Request) {
 	c, _ := qrcode.New(content, qrcode.Medium)
 	c.BackgroundColor = color.RGBA{0x00, 0x00, 0x33, 0xff}
 	render.Status(r, http.StatusCreated)
-	//w.Write([]byte(c.ToSmallString(true)))
 	w.Write([]byte(boolToByte(c)))
 
 }
@@ -100,6 +99,7 @@ func (qr qrHandler) ImgQr(w http.ResponseWriter, r *http.Request) {
 	}
 
 	c, _ = qrcode.New(content.Content, qrcode.Medium)
+	fmt.Println(content.BgColor)
 	c.BackgroundColor, _ = utils.ParseHexColor(content.BgColor)
 	c.ForegroundColor, _ = utils.ParseHexColor(content.Color)
 
