@@ -3,18 +3,17 @@ FROM golang:1.20.0-alpine as builder
 ARG TARGETOS
 ARG TARGETARCH
 
-COPY go.mod go.sum ./qrservice/
 WORKDIR /app
+COPY go.* ./
 RUN go mod download
-COPY . /app
-RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -mod=readonly -a -installsuffix cgo -o qrgen
+COPY . ./
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -mod=readonly -v -o qrgen ./cmd/qrservice
 
 
 FROM alpine:3
 
-RUN apk add --no-cache ca-certificates && update-ca-certificates
-COPY --from=builder /app/qrgen /usr/bin/qrservice
+RUN apk update \
+      && apk add --no-cache ca-certificates && update-ca-certificates
+COPY --from=builder /app/qrgen /qrgen
 
-EXPOSE 3200 3200
-
-ENTRYPOINT ["/usr/bin/qrservice"]
+ENTRYPOINT ["/qrgen"]

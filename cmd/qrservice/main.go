@@ -5,6 +5,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"net/http"
+	"os"
 	"qrservice/healthcheckhandler"
 	"qrservice/qrhandlers"
 	"time"
@@ -15,12 +16,16 @@ const (
 )
 
 var (
-	port      = flag.String("port", "3200", "http service port")
 	startTime time.Time
 )
 
 func main() {
 	startTime = time.Now()
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "3200"
+	}
+
 	flag.Parse()
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
@@ -37,5 +42,5 @@ func main() {
 	r.Mount("/qr", qr.Routes())
 	r.Mount("/healthcheck", hc.Routes())
 
-	http.ListenAndServe(portDelimiter+*port, r)
+	http.ListenAndServe(portDelimiter+port, r)
 }

@@ -8,10 +8,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/skip2/go-qrcode"
-	"github.com/stain-win/qrservice/errorhandler"
-	"github.com/stain-win/qrservice/utils"
 	"image/color"
 	"net/http"
+	"qrservice/errorhandler"
+	"qrservice/utils"
 )
 
 var qrContentKey = "content"
