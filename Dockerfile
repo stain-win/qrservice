@@ -1,16 +1,19 @@
-FROM golang:1.14.6-alpine3.12 as builder
+FROM golang:1.20.0-alpine as builder
 
-COPY go.mod go.sum /go/src/github.com/stain-win/qrservice/
-WORKDIR /go/src/github.com/stain-win/qrservice/
+ARG TARGETOS
+ARG TARGETARCH
+
+COPY go.mod go.sum ./qrservice/
+WORKDIR /app
 RUN go mod download
-COPY . /go/src/github.com/stain-win/qrservice/
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o dist/qrservice github.com/stain-win/qrservice/cmd/qrservice
+COPY . /app
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -mod=readonly -a -installsuffix cgo -o qrgen
 
 
-FROM alpine
+FROM alpine:3
 
 RUN apk add --no-cache ca-certificates && update-ca-certificates
-COPY --from=builder /go/src/github.com/stain-win/qrservice/dist/qrservice /usr/bin/qrservice
+COPY --from=builder /app/qrgen /usr/bin/qrservice
 
 EXPOSE 3200 3200
 
