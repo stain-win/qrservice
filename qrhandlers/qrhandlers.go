@@ -24,13 +24,13 @@ type QrJsonResponse struct {
 }
 
 type QrCode struct {
-	Content string `json:"qr_content"`
-	BgColor string `json:"bg_color,omitempty"`
-	Color   string `json:"color,omitempty"`
-	Level   int    `json:"err_level,omitempty"`
-	Size    int    `json:"size,omitempty"`
-	Output  string `json:"output,omitempty"`
-	Border  bool   `json:"border,omitempty"`
+	Content string               `json:"qr_content"`
+	BgColor string               `json:"bg_color,omitempty"`
+	Color   string               `json:"color,omitempty"`
+	Level   qrcode.RecoveryLevel `json:"err_level,omitempty"`
+	Size    int                  `json:"size,omitempty"`
+	Output  string               `json:"output,omitempty"`
+	Border  bool                 `json:"border,omitempty"`
 }
 
 type QrCodeRequest struct {
@@ -54,6 +54,7 @@ func (qr qrHandler) Routes() chi.Router {
 	r.Use(qr.QRContext)
 	r.Get("/", qr.ByteQr)
 	r.Post("/img", qr.ImgQr)
+	r.Post("/svg", qr.SVGQr)
 	r.Get("/json", qr.JsonQr)
 	return r
 }
@@ -98,8 +99,7 @@ func (qr qrHandler) ImgQr(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c, _ = qrcode.New(content.Content, qrcode.Medium)
-	fmt.Println(content.BgColor)
+	c, _ = qrcode.New(content.Content, content.Level)
 	c.BackgroundColor, _ = utils.ParseHexColor(content.BgColor)
 	c.ForegroundColor, _ = utils.ParseHexColor(content.Color)
 
@@ -107,6 +107,25 @@ func (qr qrHandler) ImgQr(w http.ResponseWriter, r *http.Request) {
 	render.Status(r, http.StatusOK)
 	w.Header().Set("Content-Type", "image/png")
 	w.Write(png)
+}
+
+func (qr qrHandler) SVGQr(w http.ResponseWriter, r *http.Request) {
+	var c *qrcode.QRCode
+	content := &QrCodeRequest{}
+
+	if err := render.Bind(r, content); err != nil {
+		render.Render(w, r, ErrInvalidRequest(err))
+		return
+	}
+
+	c, _ = qrcode.New(content.Content, content.Level)
+	c.BackgroundColor, _ = utils.ParseHexColor(content.BgColor)
+	c.ForegroundColor, _ = utils.ParseHexColor(content.Color)
+
+	svg := utils.NewQRSVG(c)
+
+	w.Header().Set("Content-Type", "image/svg+xml")
+	w.Write([]byte(svg))
 }
 
 func NewQrHandler() *qrHandler {
